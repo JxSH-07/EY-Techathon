@@ -1,3 +1,4 @@
+from functools import total_ordering
 from supabase import create_client
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -85,13 +86,90 @@ def generate_tender_pdf(data):
         print(f"⚠️ Error loading logo: {str(e)}")
         y = height - 50
 
+    # Company Header
+    pdf.setFont("Helvetica-Bold", 16)
+    company_name = "CONCEPTUAL CATALYSIS"
+    company_name_width = pdf.stringWidth(company_name, "Helvetica-Bold", 16)
+    pdf.drawString((width - company_name_width) / 2, y, company_name)
+    y -= 25
+    
+    # Company Tagline
+    pdf.setFont("Helvetica-Bold", 12)
+    tagline = "Your Trusted Partner in Quality Wires & Cables"
+    tagline_width = pdf.stringWidth(tagline, "Helvetica-Bold", 12)
+    pdf.drawString((width - tagline_width) / 2, y, tagline)
+    y -= 20
+    
+    # Company Description
+    pdf.setFont("Helvetica", 10)
+    description = [
+        "Established with a vision to provide superior quality electrical solutions, we have been a leading",
+        "manufacturer and supplier of high-performance wires and cables. With years of expertise in the industry,",
+        "we specialize in delivering reliable and durable cabling solutions for residential, commercial, and",
+        "industrial applications. Our commitment to quality, innovation, and customer satisfaction makes us the",
+        "preferred choice for all your wiring needs."
+    ]
+    
+    for line in description:
+        if y < 100:  # Check if we need a new page
+            pdf.showPage()
+            y = height - 50
+        pdf.drawString(50, y, line)
+        y -= 15
+    
+    y -= 20  # Add extra space before title
+    
     # Title
     pdf.setFont("Helvetica-Bold", 14)
     title = "Tender Proposal – 2XY Cable (<5 sq.mm) Specification Report"
     title_width = pdf.stringWidth(title, "Helvetica-Bold", 14)
-    pdf.drawString((width - title_width) / 2, y, title)  # Center the title
-    y -= 40
+    pdf.drawString((width - title_width) / 2, y, title)
+    y -= 30
+    
+    # Add tender details section after the title
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(50, y, "TENDER DETAILS")
+    y -= 20
 
+    # Tender information in a clean format
+    tender_details = [
+        ("Tender No.", "TDR/2024-25/001"),
+        ("Tender Name", "Supply of 2XY Cables for Electrical Works"),
+        ("Tender Opening Date", "25/12/2025"),
+        ("Tender Closing Date", "15/01/2026"),
+        ("Bid Validity", "90 days from the date of tender opening"),
+        ("Earnest Money Deposit (EMD)", "Rs. 5,000/-"),
+        ("Tender Document Fee", "Rs. 1,000/- (Non-refundable)"),
+        ("Completion Period", "60 days from the date of work order"),
+        ("Warranty", "24 months from the date of installation"),
+        ("Payment Terms", "100% payment within 30 days of delivery and installation"),
+        ("Total Qunatity Needed", "100")
+    ]
+
+    # Draw tender details
+    pdf.setFont("Helvetica", 10)
+    # Find the maximum label width for alignment
+    pdf.setFont("Helvetica-Bold", 10)
+    max_label_width = max(pdf.stringWidth(f"{label}:", "Helvetica-Bold", 10) for label, _ in tender_details)
+    value_start = 60 + max_label_width  # 10px padding after the longest label
+    
+    for label, value in tender_details:
+        if y < 100:  # Check if we need a new page
+            pdf.showPage()
+            y = height - 50
+            pdf.setFont("Helvetica", 10)
+        
+        # Draw label in bold
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.drawString(50, y, f"{label}:")
+        
+        # Draw value with proper spacing
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(value_start, y, value)
+        y -= 15
+
+    y -= 15  # Add some space before the table
+    
     # Table Header
     pdf.setFont("Helvetica-Bold", 9)
     pdf.drawString(30, y, "Category")
@@ -124,6 +202,53 @@ def generate_tender_pdf(data):
             pdf.showPage()
             pdf.setFont("Helvetica", 9)
             y = height - 50
+            
+    # Add total price calculation
+    total_quantity = 100
+    y -= 30  # Add some space before the total
+    pdf.setFont("Helvetica-Bold", 10)
+    
+    # Add total price calculation and breakdown
+    y -= 5  # Add some space before the total
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(50, y, "PRICE BREAKDOWN")
+    y -= 15
+    
+    # Find minimum price from the data
+    min_price = min(
+        float(item.get('Price (Rupees/m)', float('inf'))) 
+        for item in data 
+        if item.get('Price (Rupees/m)')
+    )
+    
+    # Price details
+    subtotal = min_price * total_quantity
+    gst = subtotal * 0.18  # 18% GST
+    grand_total = subtotal + gst
+    
+    price_details = [
+        ("Price per meter:", f"Rs. {int(min_price)}/m"),
+        ("Total quantity:", "100 meters"),
+        ("Subtotal:", f"Rs. {int(subtotal)}"),
+        ("GST (18%):", f"Rs. {int(gst)}"),
+        ("Grand Total:", f"Rs. {int(grand_total)}")
+    ]
+    
+    # Draw price details
+    pdf.setFont("Helvetica", 10)
+    for label, value in price_details:
+        if y < 100:  # Check if we need a new page
+            pdf.showPage()
+            y = height - 50
+            pdf.setFont("Helvetica", 10)
+        
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.drawString(50, y, label)
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(180, y, value)
+        y -= 15
+    
+
 
     pdf.save()
     print("✅ Tender PDF Generated Successfully: tender_report.pdf")
