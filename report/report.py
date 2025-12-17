@@ -170,6 +170,14 @@ def generate_tender_pdf(data):
 
     y -= 15  # Add some space before the table
     
+    # Filter data to show only the row with minimum price
+    if data:
+        # Find the item with minimum price (handle None or empty prices)
+        valid_data = [item for item in data if item.get('Price (Rupees/m)') is not None]
+        if valid_data:
+            min_price_item = min(valid_data, key=lambda x: float(x['Price (Rupees/m)']))
+            data = [min_price_item]
+    
     # Table Header
     pdf.setFont("Helvetica-Bold", 9)
     pdf.drawString(30, y, "Category")
